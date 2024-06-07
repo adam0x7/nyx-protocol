@@ -10,16 +10,16 @@ contract Utxo {
     using SafeMath for uint256;
     using ECDSA for bytes32;
 
-    struct UtxoStruct {
+    struct UtxoParams {
         uint256 amount;
         uint256 blinding;
-        Keypair keypair;
+        address pubKey;
         uint256 index;
         uint256 commitment;
         uint256 nullifier;
     }
 
-    mapping(uint256 => UtxoStruct) public utxos;
+    mapping(uint256 => UtxoParams) public utxos;
     uint256 public nextUtxoId = 1;
 
     /**
@@ -29,14 +29,14 @@ contract Utxo {
      * @param keypair Keypair associated with the UTXO
      * @param index UTXO index in the merkle tree
      */
-    function createUtxo(uint256 amount, uint256 blinding, Keypair keypair, uint256 index) public returns (uint256) {
-        uint256 commitment = Poseidon.hash([amount, keypair.pubkey(), blinding]);
-        uint256 nullifier = computeNullifier(commitment, index, keypair);
+    function createUTXO(uint256 amount, uint256 blinding, address pubKey, uint256 index) public returns (uint256) {
+        uint256 commitment = Poseidon.hash([amount, pubKey.pubkey(), blinding]);
+        uint256 nullifier = computeNullifier(commitment, index, pubKey);
 
-        UtxoStruct memory newUtxo = UtxoStruct({
+        UtxoParams memory newUtxo = UtxoParams({
             amount: amount,
             blinding: blinding,
-            keypair: keypair,
+            keypair: pubKey,
             index: index,
             commitment: commitment,
             nullifier: nullifier
@@ -68,8 +68,8 @@ contract Utxo {
      * @return bytes Encrypted UTXO data
      */
     function encryptUtxo(uint256 utxoId) public view returns (bytes memory) {
-        UtxoStruct storage utxo = utxos[utxoId];
-        return keccak256(abi.encodePacked(utxo.amount, utxo.blinding)).toEthSignedMessageHash().recover(utxo.keypair.privkey());
+        UtxoParams storage utxo = utxos[utxoId];
+        return keccak256(abi.encodePacked(utxo.amount, utxo.blinding)).toEthSignedMessageHash().recover(utxo.pubKey.privkey());
     }
 
     /**
@@ -78,10 +78,10 @@ contract Utxo {
      * @param keypair Keypair used for decryption
      * @return UtxoStruct Decrypted UTXO
      */
-    function decryptUtxo(bytes memory encryptedData, Keypair keypair) public pure returns (UtxoStruct memory) {
+    function decryptUtxo(bytes memory encryptedData, Keypair keypair) public pure returns (UtxoParams memory) {
         // Decryption logic based on the encryption method used
         // This is a placeholder as Solidity does not support decryption natively
-        return UtxoStruct({
+        return UtxoParams({
             amount: 0,
             blinding: 0,
             keypair: keypair,
